@@ -1,7 +1,7 @@
 fastapi>=0.104.1
 uvicorn[standard]>=0.24.0
 python-multipart>=0.0.6
-tensorflow>=2.16.0
+tensorflow-cpu>=2.16.0
 pillow>=10.0.1
 numpy>=1.26.4
 pydantic>=2.4.2
