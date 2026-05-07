@@ -141,16 +141,8 @@ async def chat(request: ChatRequest):
     if not GEMINI_API_KEY:
         raise HTTPException(status_code=500, detail="Gemini API key not configured on server.")
     
-    # Prioritize Flash models (higher quota/speed) -> then Pro models
-    models_to_try = [
-        "gemini-2.0-flash", 
-        "gemini-1.5-flash", 
-        "gemini-flash-latest", 
-        "gemini-2.5-flash",
-        "gemini-3.0-flash",
-        "gemini-1.5-pro",
-        "gemini-2.0-pro"
-    ]
+    # List of models to try in order of preference (Flash models have higher free tier quotas)
+    models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     last_error = ""
 
     for model_name in models_to_try:
@@ -183,7 +175,7 @@ async def translate(request: TranslateRequest):
     if not GEMINI_API_KEY:
         return {"translated_data": request.data}
     
-    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-flash-latest"]
+    models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     
     for model_name in models_to_try:
         try:
