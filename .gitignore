@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+ENV/
+
+# Environment variables
+.env
+
+# Project specific
+dataset/
+backend_error.log
+test_load.py
+test_gemini.py
+
+# Models (Keep the .h5 if you want to deploy it with git, or ignore if using LFS)
+# model/plant_disease_model.h5
+
+# OS files
+.DS_Store
+Thumbs.db
