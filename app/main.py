@@ -152,35 +152,50 @@ async def translate(request: TranslateRequest):
     if not client:
         return {"translated_data": request.data}
     
-    # Using the most robust Flash models for high-speed translation
-    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
-    
+    # Expanded model list — Lite models have SEPARATE quotas from full Flash models
+    # Order: try newest first, then lite variants which have independent rate limits
+    models_to_try = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash-lite",      # Separate quota from gemini-2.0-flash
+        "gemini-flash-lite-latest",    # Another independent quota pool
+        "gemini-2.0-flash",
+        "gemini-flash-latest",
+    ]
+
+    prompt = (
+        f"You are a professional agricultural translator. "
+        f"Translate all the values in the following JSON data into {request.target_language}. "
+        f"Translate the detailed descriptions for causes, symptoms, treatment, and prevention fully. "
+        "Keep the JSON keys (plantName, diseaseName, causes, symptoms, treatment, prevention) EXACTLY the same in English. "
+        "Return ONLY the translated JSON object, nothing else.\n\n"
+        f"Data to translate: {json.dumps(request.data)}"
+    )
+
     for model_name in models_to_try:
-        try:
-            # More explicit prompt to ensure valid JSON structure and FULL content translation
-            prompt = (
-                f"You are a professional agricultural translator. "
-                f"Translate all the values in the following JSON data into {request.target_language}. "
-                f"Crucially, translate the detailed descriptions for causes, symptoms, treatment, and prevention. "
-                "Keep the JSON keys (plantName, diseaseName, causes, symptoms, treatment, prevention) EXACTLY the same. "
-                "Return ONLY the translated JSON object, nothing else.\n\n"
-                f"Data to translate: {json.dumps(request.data)}"
-            )
-            response = client.models.generate_content(model=model_name, contents=prompt)
-            
-            text = response.text.replace("```json", "").replace("```", "").strip()
-            start, end = text.find("{"), text.rfind("}")
-            if start != -1 and end != -1:
-                translated_json = json.loads(text[start:end+1])
-                # Ensure all original keys are present in the response
-                for key in request.data.keys():
-                    if key not in translated_json:
-                        translated_json[key] = request.data[key]
-                return {"translated_data": translated_json, "model_used": model_name}
-        except Exception as e:
-            print(f"[TRANSLATE DEBUG] {model_name} failed: {e}")
-            continue
-    return {"translated_data": request.data}
+        for attempt in range(2):  # Try each model up to 2 times
+            try:
+                response = client.models.generate_content(model=model_name, contents=prompt)
+                text = response.text.replace("```json", "").replace("```", "").strip()
+                start, end = text.find("{"), text.rfind("}")
+                if start != -1 and end != -1:
+                    translated_json = json.loads(text[start:end+1])
+                    # Safety: restore any keys the AI may have dropped
+                    for key in request.data.keys():
+                        if key not in translated_json:
+                            translated_json[key] = request.data[key]
+                    return {"translated_data": translated_json, "model_used": model_name}
+                break  # Response was invalid JSON, move to next model
+            except Exception as e:
+                err = str(e)
+                print(f"[TRANSLATE] {model_name} attempt {attempt+1} failed: {err[:120]}")
+                if "429" in err and attempt == 0:
+                    time.sleep(3)   # Wait 3s then retry once more on quota error
+                    continue
+                break  # Any other error → try next model
+
+    # All models failed — return original data with a flag so frontend can show message
+    return {"translated_data": request.data, "quota_exhausted": True}
+
 
 class TTSRequest(BaseModel):
     text: str
