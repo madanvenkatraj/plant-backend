@@ -128,8 +128,8 @@ async def chat(request: ChatRequest):
     if not client:
         raise HTTPException(status_code=500, detail="Gemini AI Client not initialized.")
     
-    # Priority order for 2026 deployment
-    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
+    # VERIFIED WORKING MODELS (tested live - 2026-05-08)
+    models_to_try = ["gemini-flash-latest", "gemini-2.5-flash-lite", "gemini-flash-lite-latest"]
     last_error = ""
 
     for model_name in models_to_try:
@@ -152,14 +152,11 @@ async def translate(request: TranslateRequest):
     if not client:
         return {"translated_data": request.data}
     
-    # Expanded model list — Lite models have SEPARATE quotas from full Flash models
-    # Order: try newest first, then lite variants which have independent rate limits
+    # VERIFIED WORKING MODELS (tested live - 2026-05-08)
     models_to_try = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash-lite",      # Separate quota from gemini-2.0-flash
-        "gemini-flash-lite-latest",    # Another independent quota pool
-        "gemini-2.0-flash",
         "gemini-flash-latest",
+        "gemini-2.5-flash-lite",
+        "gemini-flash-lite-latest",
     ]
 
     prompt = (
