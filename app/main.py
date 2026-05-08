@@ -157,11 +157,14 @@ async def translate(request: TranslateRequest):
     
     for model_name in models_to_try:
         try:
-            # More explicit prompt to ensure valid JSON structure is maintained
+            # More explicit prompt to ensure valid JSON structure and FULL content translation
             prompt = (
-                f"Translate the values in this JSON to {request.target_language}. "
-                "Keep all keys exactly the same. Return ONLY the translated JSON object.\n"
-                f"Data: {json.dumps(request.data)}"
+                f"You are a professional agricultural translator. "
+                f"Translate all the values in the following JSON data into {request.target_language}. "
+                f"Crucially, translate the detailed descriptions for causes, symptoms, treatment, and prevention. "
+                "Keep the JSON keys (plantName, diseaseName, causes, symptoms, treatment, prevention) EXACTLY the same. "
+                "Return ONLY the translated JSON object, nothing else.\n\n"
+                f"Data to translate: {json.dumps(request.data)}"
             )
             response = client.models.generate_content(model=model_name, contents=prompt)
             
