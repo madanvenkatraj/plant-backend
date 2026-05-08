@@ -152,17 +152,27 @@ async def translate(request: TranslateRequest):
     if not client:
         return {"translated_data": request.data}
     
-    models_to_try = ["gemini-2.0-flash", "gemini-1.5-flash"]
+    # Using the most robust Flash models for high-speed translation
+    models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest"]
     
     for model_name in models_to_try:
         try:
-            prompt = f"Translate this JSON to {request.target_language}. Return ONLY raw JSON.\nData: {json.dumps(request.data)}"
+            # More explicit prompt to ensure valid JSON structure is maintained
+            prompt = (
+                f"Translate the values in this JSON to {request.target_language}. "
+                "Keep all keys exactly the same. Return ONLY the translated JSON object.\n"
+                f"Data: {json.dumps(request.data)}"
+            )
             response = client.models.generate_content(model=model_name, contents=prompt)
             
             text = response.text.replace("```json", "").replace("```", "").strip()
             start, end = text.find("{"), text.rfind("}")
             if start != -1 and end != -1:
                 translated_json = json.loads(text[start:end+1])
+                # Ensure all original keys are present in the response
+                for key in request.data.keys():
+                    if key not in translated_json:
+                        translated_json[key] = request.data[key]
                 return {"translated_data": translated_json, "model_used": model_name}
         except Exception as e:
             print(f"[TRANSLATE DEBUG] {model_name} failed: {e}")
